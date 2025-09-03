@@ -1,3 +1,4 @@
+// components/StudentView.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,15 +8,7 @@ import {
   signOut,
   User,
 } from "firebase/auth";
-import {
-  arrayUnion,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
-import dayjs from "dayjs";
+import { arrayUnion, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db, provider, ts } from "../config/firebase";
 import {
   inNY,
@@ -46,8 +39,6 @@ export default function StudentView() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       setLoading(false);
-
-      // Upsert users/<uid> for roster
       if (u) {
         await setDoc(
           doc(db, "users", u.uid),
@@ -70,7 +61,7 @@ export default function StudentView() {
       if (!user || !todayIsClass) return;
       const snap = await getDoc(doc(db, "attendance", todayKey));
       if (snap.exists()) {
-        const data = snap.data();
+        const data = snap.data() as any;
         const presentUIDs: string[] = data.presentUIDs ?? [];
         if (presentUIDs.includes(user.uid)) {
           setAlready(true);
@@ -97,9 +88,9 @@ export default function StudentView() {
     if (!user) return setStatusMsg("Please sign in first.");
     if (!todayIsClass) return setStatusMsg("No class today (M/W/F).");
 
-    const now = dayjs().tz(TZ);
+    const now = inNY(); // NY-local now
     if (!isWithinWindowNow(todayNY, now)) {
-      return setStatusMsg("Attendance window closed (10:30–12:00).");
+      return setStatusMsg("Attendance window closed (10:30–2:00).");
     }
 
     if (!expected) return setStatusMsg("No password for today.");
@@ -130,13 +121,9 @@ export default function StudentView() {
     if (snap.exists()) {
       await updateDoc(ref, payload as any);
     } else {
-      await setDoc(ref, {
-        ...payload,
-        createdAt: ts(),
-      });
+      await setDoc(ref, { ...payload, createdAt: ts() });
     }
 
-    alert("Worked");
     setOk(true);
     setAlready(true);
     setStatusMsg("Marked present. Have a great class! 🎉");
@@ -151,19 +138,19 @@ export default function StudentView() {
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6">
+    <div className="max-w-xl mx-auto p-6 font-louize">
       <Header user={user} onSignIn={handleSignIn} onSignOut={handleSignOut} />
 
       <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
         <div className="text-sm text-zinc-400">
-          {todayNY.format("dddd, MMM D, YYYY")} · New York time
+          {todayNY.format("dddd, MMM D, YYYY")} · Yale time
         </div>
-        <h1 className="text-2xl font-semibold mt-1">MENG 2311 Attendance</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Attendance</h1>
 
         {!todayIsClass && (
           <p className="mt-4 text-zinc-300">
             No class today. Attendance opens on Mondays, Wednesdays, and Fridays
-            (10:30–12:00).
+            (10:30am–2:00pm).
           </p>
         )}
 
@@ -175,30 +162,36 @@ export default function StudentView() {
                 word on the board
               </span>{" "}
               to mark attendance. The window is{" "}
-              <span className="font-medium">10:30–12:00</span> (New York).
+              <span className="font-medium">10:30–2:00</span> (Yale time).
             </p>
 
-            <div className="mt-5 flex gap-3">
-              <input
-                disabled={!user || already}
-                className="flex-1 rounded-xl bg-zinc-800 px-4 py-3 outline-none ring-1 ring-zinc-700 focus:ring-brand-600 disabled:opacity-60"
-                placeholder="Enter today's word…"
-                value={entered}
-                onChange={(e) => setEntered(e.target.value)}
-              />
-              <button
-                disabled={!user || already}
-                onClick={submit}
-                className="rounded-xl px-5 py-3 bg-brand-600 hover:opacity-95 disabled:opacity-60"
-              >
-                Mark Present
-              </button>
-            </div>
+            {/* Show input + button ONLY if not already present */}
+            {!already && (
+              <div className="mt-5 flex gap-3">
+                <input
+                  disabled={!user}
+                  className="flex-1 rounded-xl bg-zinc-800 px-4 py-3 outline-none ring-1 ring-zinc-700 focus:ring-pink-600 disabled:opacity-60"
+                  placeholder="Enter today's word…"
+                  value={entered}
+                  onChange={(e) => setEntered(e.target.value)}
+                />
+                <button
+                  disabled={!user}
+                  onClick={submit}
+                  className="relative cursor-pointer overflow-hidden rounded-full bg-gradient-to-r from-pink-600 to-fuchsia-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-300 ease-out hover:scale-105 hover:shadow-pink-500/40 active:scale-95 disabled:opacity-60"
+                >
+                  <span className="relative z-10">Mark Present</span>
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-500 ease-out hover:translate-x-full" />
+                </button>
+              </div>
+            )}
 
             {statusMsg && (
               <div
-                className={`mt-4 text-sm ${
-                  ok ? "text-emerald-400" : "text-amber-400"
+                className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                  ok
+                    ? "border-emerald-900/60 bg-emerald-900/20 text-emerald-300"
+                    : "border-amber-900/50 bg-amber-900/10 text-amber-300"
                 }`}
               >
                 {statusMsg}
@@ -224,14 +217,20 @@ function Header({
 }) {
   return (
     <div className="flex items-center justify-between">
+      {/* Neumorphic course badge */}
       <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-600 to-fuchsia-600" />
-        <div className="font-medium">Attendance</div>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.35)]">
+          <span className="font-semibold tracking-wide text-zinc-100">
+            MENG&nbsp;2311
+          </span>
+        </div>
+        <div className="text-sm text-zinc-400">Yale · M/W/F</div>
       </div>
+
       <div>
         {!user ? (
           <button
-            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700"
+            className="cursor-pointer rounded-xl bg-zinc-800 px-4 py-2 font-medium text-zinc-100 transition hover:bg-zinc-700"
             onClick={onSignIn}
           >
             Sign in with Google
@@ -240,7 +239,7 @@ function Header({
           <div className="flex items-center gap-3">
             <div className="text-sm text-zinc-400">{user.email}</div>
             <button
-              className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700"
+              className="cursor-pointer rounded-xl bg-zinc-800 px-3 py-2 transition hover:bg-zinc-700"
               onClick={onSignOut}
             >
               Sign out
@@ -255,8 +254,7 @@ function Header({
 function Footer() {
   return (
     <div className="mt-10 text-xs text-zinc-500">
-      Class is M/W/F 10:30–11:20 (Yale time). The password will be provided by
-      the professor during class.
+      Class is M/W/F 10:30–11:20 (Yale time). Attendance window: 10:30am–2:00pm.
     </div>
   );
 }
@@ -264,9 +262,9 @@ function Footer() {
 function Skeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-5 w-40 bg-zinc-800 rounded mb-3"></div>
-      <div className="h-8 w-full bg-zinc-800 rounded mb-4"></div>
-      <div className="h-48 w-full bg-zinc-900 rounded"></div>
+      <div className="mb-3 h-5 w-40 rounded bg-zinc-800"></div>
+      <div className="mb-4 h-8 w-full rounded bg-zinc-800"></div>
+      <div className="h-48 w-full rounded bg-zinc-900"></div>
     </div>
   );
 }

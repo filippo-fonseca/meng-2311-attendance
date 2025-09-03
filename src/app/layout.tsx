@@ -1,5 +1,7 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,14 +19,40 @@ export const metadata: Metadata = {
   description: "Attendance system for MENG 2311 class",
 };
 
+const louize = localFont({
+  src: [
+    {
+      path: "../../public/fonts/louize-regular.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/louize-medium.otf",
+      weight: "500",
+      style: "normal",
+    },
+  ],
+  variable: "--font-louize",
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" className={`dark ${louize.variable}`}>
+      <body className="min-h-screen antialiased font-louize">
+        {children}
+
+        {/* Super subtle footer */}
+        <footer className="mt-10 text-center text-[10px] text-zinc-500 opacity-90 select-none">
+          built by Filippo :). If you have any feedback, please{" "}
+          <a href="mailto:filippo.fonseca@yale.edu" className="text-white">
+            reach out!
+          </a>
+        </footer>
+      </body>
     </html>
   );
 }
