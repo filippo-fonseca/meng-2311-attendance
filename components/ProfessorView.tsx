@@ -21,6 +21,7 @@ import {
   passwordForDate,
   TZ,
   dateKey,
+  PROFESSOR_EMAIL,
 } from "../lib/schedule";
 
 dayjs.extend(utc);
@@ -109,7 +110,7 @@ export default function ProfessorView() {
         }
       });
       const filtered = list.filter(
-        (u) => (u.email ?? "").toLowerCase() !== "filippo.fonseca@yale.edu"
+        (u) => (u.email ?? "").toLowerCase() !== PROFESSOR_EMAIL
       );
       setRoster(filtered);
     })();

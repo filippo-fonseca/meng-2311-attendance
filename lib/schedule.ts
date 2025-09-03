@@ -8,7 +8,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const TZ = "America/New_York";
-export const PROFESSOR_EMAIL = "filippo.fonseca@yale.edu";
+export const PROFESSOR_EMAIL = "omer.subasi@yale.edu";
 
 // 🔧 Adjust these for your term
 export const TERM_START = "2025-09-01"; // yyyy-mm-dd, local to New York
